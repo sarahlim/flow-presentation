@@ -27,7 +27,7 @@ function getName(x) {
 In the function `getName`, the line `x = x || robby;` is a common JavaScript idiom, and assigns `x` a default value of `robby`. It's equivalent to `x = x ? x : robby`.
 
 <!-- > NB: You may notice that we haven't provided annotations for `x`. Flow infers a compatible type of `x`. Calling `getKind` with an invalid argument would fail to typecheck.
-> 
+>
 > NB2: If you try calling `getName({})` with an empty object `{}`, Flow won't throw an error. The type system behaves unsafely with empty objects. For more, see [Unknown property lookup on unsealed objects is unsafe](https://flow.org/en/docs/types/objects/#toc-unknown-property-lookup-on-unsealed-objects-is-unsafe) in the documentation. -->
 
 However, the following function *fails* to [typecheck](https://flow.org/try/#0G4QwTgBGD2BGsE8IF4IG8IDsQFsCmAXBAOQBKcixAvgNwBQdAZgK6YDGALgJbSYQDmeDgDlceAGIguAGwAUADwCU6OhAjyU6iAB9tUCgnpqW7bryh4AzkNnKMG1JmbTpNCFVUXrHW0YsdmMD55ADpsfHoqIA):
@@ -73,8 +73,8 @@ There are several new concepts here, and we'll illustrate them below in the infe
 
 - **Effects** (represented with $\varepsilon, \omega$) are program variables, like `x` or `y`. An effect $\varepsilon$ associated with some expression $e$ roughly describes the set of variables mutated by evaluating $e$.
 - **Predicates** (represented with $\psi_1, \psi_2, \ldots$) are statements like $x \mapsto \mathrm{truthy}$. A predicate $P$ maps a variable to what we know about its type. In the typing judgment above, a predicate set $\psi$ associated with some expression $e$ is roughly the additional typing information we learn when $e$ is truthy.
-- **Environments** (represented with $\Gamma_1, \Gamma_2, \ldots$) map 
-- **Constraints** (represented with $C_1, C_2, \ldots$) are the trickiest concept to understand 
+- **Environments** (represented with $\Gamma_1, \Gamma_2, \ldots$) map
+- **Constraints** (represented with $C_1, C_2, \ldots$) are the trickiest concept to understand
 
 # Constraint generation
 
@@ -166,6 +166,27 @@ robby
 x || robby
 ```
 
+This expression can evaluate to two things: either 1) `x`, if `x` is truthy or 2) `robby`, if `x` is falsey. This is reflected in the rule for \textsc{CG-Or}, which tells us that:
+
+- The resulting expression has type $\alpha \cup \tau_2$, where
+    + $\alpha$ is a fresh type variable and
+    + $tau_2$ is the type which results from evaluating `robby`. $tau_2$ is proved by $\Gamma'_1$, which is produced through a refinement on $\Gamma_1$, the environment which results from evaluating `x`.
+- The resulting effect is $\varepsilon_1 \cup \varepsilon_2$, where
+    + $\varepsilon_1$ are the effects associated with evaluating $x$ and
+    + $\varepsilon_2$ are the effects associated with evaluating $robby$.
+- The predicate $\psi$ is produced, which is the result of a logical or on
+    + $\psi_1 \setminus \varepsilon_2$, the predicates associated with `x` without the effects associated with`robby` and
+    + $\psi_2$, the predicates associated with `robby`
+- We get a new environment, $\Gamma'$, which comes from the union of:
+    + $\Gamma_1''$, the result of refining the environment obtained after evaluating `x` with $\psi_1$, the predicates associated with `x`
+    + $\Gamma_2$, the environment obtained after evaluating `robby`
+- The new constraints are the union of:
+    + $C_1$, the constraints
+    + $C_2$, the constraints
+    + $C_3$, the constraints
+    + $C_4$, the constraints
+    + and a new constraint that $tau_1$, the type of `x` should be a
+
 ## Record lookup: \textsc{CG-FdRd}
 
 ```js
@@ -223,5 +244,5 @@ x.names
  publisher = {ACM},
  address = {New York, NY, USA},
  keywords = {JavaScript, Type Inference, Type Systems},
-} 
+}
  -->
