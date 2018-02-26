@@ -80,16 +80,20 @@ There are several new concepts here, and we'll illustrate them below in the infe
 
 ## Record literals: \textsc{CG-Rec}
 
-The inference rule \textsc{CG-Rec} says that an environment $\Gamma$ proves that expression $\{ f: e \}$:
+```js
+{ name: 'Robby' }  // { f: e }
+```
 
-- Has **type** $\{ f: \alpha \}$, where $\alpha$ is a fresh type variable;
-- With the **effects** $\varepsilon$ of evaluating $e$;
-- No new **predicates**;
-- And outputs:
-    + **Environment** $\Gamma'$, the output of evaluating $e$ via the standard judgment $\Gamma \vdash e : \tau; \varepsilon; \psi \dashv \Gamma' \triangleright C$, and
-    + **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints from evaluating $e$ and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$ in the result.
+The inference rule \textsc{CG-Rec} allows us to prove the following about an expression $\{ f: e \}$:
 
-For the example code 
+- It has **type** $\{ f: \alpha \}$, where $\alpha$ is a fresh type variable;
+- Produces the **effects** $\varepsilon$ of evaluating $e$;
+- Does not add any new **predicates**;
+- Produces outputs:
+    + **Environment** $\Gamma'$, the output of evaluating $e$, and
+    + **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints $C$ from evaluating $e$, and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$.
+
+By applying this rule to the record in the example code,
 
 ```js
 var robby = { name: 'Robby' };
