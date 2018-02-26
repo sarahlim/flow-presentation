@@ -13,7 +13,7 @@ whitespace: medium
 
 # Example code
 
-Consider the following JavaScript code, which typechecks just fine in Flow (you can [try it here](https://flow.org/try/#0G4QwTgBGD2BGsE8IF4IG8IDsQFsCmAXBAOQzwLEQC+A3AFB0BmArpgMYAuAltJhAOZ4OAOVx4AFAA8AlOjoQIklIogAfVVDiJ6Clu268oeAM5DxsjEtSZmAG1s1q8o6Y7mdRjszB9JAOmx8eiogA)):
+Consider the following JavaScript code, which typechecks just fine in Flow (you can [try it here](https://flow.org/try/#0G4QwTgBGD2BGsE8IF4IG8IDsQFsCmAXBAOQBKcixAvgNwBQdAZgK6YDGALgJbSYQDmeDgDlceABQAPAJTo6ECJJSKIAH1VQKCegrBDmYPpIB02fPSpA)):
 
 ```js
 var robby = { name: 'Robby'};
@@ -30,7 +30,7 @@ In the function `getName`, the line `x = x || robby;` is a common JavaScript idi
 > 
 > NB2: If you try calling `getName({})` with an empty object `{}`, Flow won't throw an error. The type system behaves unsafely with empty objects. For more, see [Unknown property lookup on unsealed objects is unsafe](https://flow.org/en/docs/types/objects/#toc-unknown-property-lookup-on-unsealed-objects-is-unsafe) in the documentation. -->
 
-However, the following function *fails* to typecheck:
+However, the following function *fails* to [typecheck](https://flow.org/try/#0G4QwTgBGD2BGsE8IF4IG8IDsQFsCmAXBAOQBKcixAvgNwBQdAZgK6YDGALgJbSYQDmeDgDlceAGIguAGwAUADwCU6OhAjyU6iAB9tUCgnpqW7bryh4AzkNnKMG1JmbTpNCFVUXrHW0YsdmMD55ADpsfHoqIA):
 
 ```js
 var robby = { name: 'Robby'};
