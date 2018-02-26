@@ -107,10 +107,12 @@ The inference rule \textsc{CG-Rec} allows us to prove the following about an exp
 
 - It has **type** $\{ f: \alpha \}$, where $\alpha$ is a fresh type variable;
 - Produces the **effects** $\varepsilon$ of evaluating $e$;
-- Does not add any new **predicates**;
-- Produces outputs:
-    + **Environment** $\Gamma'$, the output of evaluating $e$, and
-    + **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints $C$ from evaluating $e$, and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$.
+- Does not add any new **predicates**.
+
+The outputs of the judgment are:
+
+- **Environment** $\Gamma'$, the output of evaluating $e$, and
+- **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints $C$ from evaluating $e$, and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$.
 
 By applying this rule to the record in the example code,
 
@@ -159,13 +161,15 @@ A successful typecheck for $(x) \to \{ s; \text{return $e$} \}$ tells us:
         + This is just the effect $\varepsilon$ of the function body, minus the parameter $x$ and local variables $\overline{x_i}$, which are local to the function and irrelevant to the calling context.
 - Declaring the function has no new **effects** (doesn't invalidate any type information). We denote the empty effect set with $\bot$.
 - No new **predicates** either, denoted $\emptyset$. Again, just declaring a function doesn't tell us anything new about the types of program variables.
-- Outputs:
-    + **Environment** $\Gamma$ is unchanged from the input,
-    + **Constraints** $C$ are the constraints produced by evaluating the function body under the environment $$\Gamma_1 = \mathrm{erase}(\Gamma), x: \alpha^\alpha, \frac{\overline{x_i} = \mathrm{locals}(s)}{x_i : \mathrm{void}^{\alpha_i}}$$ which approximates the *flow-insensitive erasure* of the input environment $\Gamma$. In other words, we don't know when the function will be called, so we:
 
-        1. Remove all the information we've accumulated about the variables in $\Gamma$ (which the function captures by closure), using the meta-function `erase`
-        2. Map the **parameter** $x$ to type $\alpha^\alpha$, where $\alpha$ is the fresh type variable we've created, and
-        3. Map all the **local variables** $\overline{x_i}$ to type $\mathrm{void}^{\alpha_i}$, where $\alpha_i$ is the fresh type variable we've created for each local. This models the JavaScript semantics of "hoisting" variables before they have been initialized.
+This judgment produces the following outputs:
+
+- **Environment** $\Gamma$ is unchanged from the input,
+- **Constraints** $C$ are the constraints produced by evaluating the function body under the environment $$\Gamma_1 = \mathrm{erase}(\Gamma), x: \alpha^\alpha, \frac{\overline{x_i} = \mathrm{locals}(s)}{x_i : \mathrm{void}^{\alpha_i}}$$ which approximates the *flow-insensitive erasure* of the input environment $\Gamma$. In other words, we don't know when the function will be called, so we:
+
+    1. Remove all the information we've accumulated about the variables in $\Gamma$ (which the function captures by closure), using the meta-function `erase`
+    2. Map the **parameter** $x$ to type $\alpha^\alpha$, where $\alpha$ is the fresh type variable we've created, and
+    3. Map all the **local variables** $\overline{x_i}$ to type $\mathrm{void}^{\alpha_i}$, where $\alpha_i$ is the fresh type variable we've created for each local. This models the JavaScript semantics of "hoisting" variables before they have been initialized.
 
 <!-- TODO: Add `erase` -->
 
