@@ -156,7 +156,7 @@ x || robby
 ## Record lookup: \textsc{CG-FdRd}
 
 ```js
-x.name
+x.names
 ```
 
 ## Function calls: \textsc{CG-Call}
