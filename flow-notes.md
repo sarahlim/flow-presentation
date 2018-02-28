@@ -145,6 +145,15 @@ A successful typecheck for $(x) \to \{ s; \text{return $e$}; \}$ tells us:
 robby
 ```
 
+Looking up a variable in our environment, $\Gamma$, tells us that `robby`
+
+- Has a type, $\tau^{\alpha}$
+- results in no effects
+- Gives us the predicate that `robby` is truthy
+- In the same environment
+- With no new constraints.
+
+
 ## Logical OR: \textsc{CG-Or}
 
 <!-- TODO(josh) -->
@@ -153,7 +162,7 @@ robby
 x || robby
 ```
 
-This expression can evaluate to two things: either 1) `x`, if `x` is truthy or 2) `robby`, if `x` is falsey. This is reflected in the rule for \textsc{CG-Or}, which tells us that:
+This expression can evaluate to one of two things: either 1) `x`, if `x` is truthy or 2) `robby`, if `x` is falsey. This is reflected in the rule for \textsc{CG-Or}, which tells us that:
 
 - The resulting expression has type $\alpha \cup \tau_2$, where
     + $\alpha$ is a fresh type variable and
@@ -168,11 +177,12 @@ This expression can evaluate to two things: either 1) `x`, if `x` is truthy or 2
     + $\Gamma_1''$, the result of refining the environment obtained after evaluating `x` with $\psi_1$, the predicates associated with `x`
     + $\Gamma_2$, the environment obtained after evaluating `robby`
 - The new constraints are the union of:
-    + $C_1$, the constraints
-    + $C_2$, the constraints
-    + $C_3$, the constraints
-    + $C_4$, the constraints
-    + and a new constraint that $tau_1$, the type of `x` should be a
+    + $C_1$, the constraints from evaluating `x`,
+    + $C_2$, the constraints obtained from applying the negation of predicates $\psi_1$ on $\Gamma_1$ (the contraints of `x` being falsey),
+    + $C_3$, the constraints from evaluating `robby`,
+    + $C_4$, the constraints obtained from applying the predicates $\psi_1$ on $\Gamma_1$ (the constraints of `x` being truthy), and
+    <!-- WARNING: no idea if this is correct -->
+    + and a new constraint that $tau_1$, the type of `x`, flows to the boolean value of `x`
 
 ## Record lookup: \textsc{CG-FdRd}
 
