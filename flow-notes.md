@@ -80,16 +80,20 @@ There are several new concepts here, and we'll illustrate them below in the infe
 
 ## Record literals: \textsc{CG-Rec}
 
-The inference rule \textsc{CG-Rec} says that an environment $\Gamma$ proves that expression $\{ f: e \}$:
+```js
+{ name: 'Robby' }  // { f: e }
+```
 
-- Has **type** $\{ f: \alpha \}$, where $\alpha$ is a fresh type variable;
-- With the **effects** $\varepsilon$ of evaluating $e$;
-- No new **predicates**;
-- And outputs:
-    + **Environment** $\Gamma'$, the output of evaluating $e$ via the standard judgment $\Gamma \vdash e : \tau; \varepsilon; \psi \dashv \Gamma' \triangleright C$, and
-    + **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints from evaluating $e$ and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$ in the result.
+The inference rule \textsc{CG-Rec} allows us to prove the following about an expression $\{ f: e \}$:
 
-For the example code
+- It has **type** $\{ f: \alpha \}$, where $\alpha$ is a fresh type variable;
+- Produces the **effects** $\varepsilon$ of evaluating $e$;
+- Does not add any new **predicates**;
+- Produces outputs:
+    + **Environment** $\Gamma'$, the output of evaluating $e$, and
+    + **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints $C$ from evaluating $e$, and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$.
+
+By applying this rule to the record in the example code,
 
 ```js
 var robby = { name: 'Robby' };
@@ -121,21 +125,30 @@ we use rule \textsc{CG-Assign}.
 <!-- TODO(slim) -->
 
 ```js
-function getName(x) {
-    // ...s
-    return e;
-}
+function getName(x) {  // (x) => {
+    x = x || robby;    //   s;
+    return x.name;     //   return e;
+}                      // }
 ```
 
 A successful typecheck for $(x) \to \{ s; \text{return $e$}; \}$ tells us:
 
-- The function has type $\alpha \xrightarrow{\varepsilon \setminus x, \overline{x_i}} \tau$, where
-    + $\alpha$ is a fresh type variable created for the parameter,
-    + $\varepsilon \setminus x, \overline{x_i}$ describes the effect had by calling the function later.
-        + This is exactly the effect $\varepsilon$ of evaluating the function's body, but we remove the parameter $x$ and local variables $\overline{x_i}$, since those are local to the function and their invalidation is irrelevant to the calling context.
-    + $\tau$ is the evaluated type of $e$, the return value in the function body.
-- No new effects, denoted $\bot$ -- just declaring a function doesn't invalidate anything.
-- No new predicates, denoted $\emptyset$. Again, just declaring a function doesn't tell us anything new about the types of our variables.
+- The function has **type** $$\alpha \xrightarrow{\varepsilon \setminus x, \overline{x_i}} \tau$$ where:
+    + $\alpha$, the **parameter type**, is a fresh type variable,
+    + $\tau$ is the **return type** of $e$, and
+    + $\varepsilon \setminus x, \overline{x_i}$ describes the function's **effect** upon invocation.
+        + This is just the effect $\varepsilon$ of the function body, minus the parameter $x$ and local variables $\overline{x_i}$, which are local to the function and irrelevant to the calling context.
+- Declaring the function has no new **effects** (doesn't invalidate any type information). We denote the empty effect set with $\bot$.
+- No new **predicates** either, denoted $\emptyset$. Again, just declaring a function doesn't tell us anything new about the types of program variables.
+- Outputs:
+    + **Environment** $\Gamma$ is unchanged from the input,
+    + **Constraints** $C$ are the constraints produced by evaluating the function body under the environment $$\Gamma_1 = \mathrm{erase}(\Gamma), x: \alpha^\alpha, \frac{\overline{x_i} = \mathrm{locals}(s)}{x_i : \mathrm{void}^{\alpha_i}}$$ which approximates the *flow-insensitive erasure* of the input environment $\Gamma$. In other words, we don't know when the function will be called, so we:
+
+        1. Remove all the information we've accumulated about the variables in $\Gamma$ (which the function captures by closure), using the meta-function `erase`
+        2. Map the **parameter** $x$ to type $\alpha^\alpha$, where $\alpha$ is the fresh type variable we've created, and
+        3. Map all the **local variables** $\overline{x_i}$ to type $\mathrm{void}^{\alpha_i}$, where $\alpha_i$ is the fresh type variable we've created for each local. This models the JavaScript semantics of "hoisting" variables before they have been initialized.
+
+<!-- TODO: Add `erase` -->
 
 ## Variable references: $\textsc{CG-Var}$
 
