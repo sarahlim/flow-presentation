@@ -14,31 +14,47 @@
   successor("aa"); // -> should error, but doesn't!
 }
 
+// IF
 {
-  // where type inference breaks:
-  let foo = 42;
-  function mutate() {
-    foo = true;
-    foo = "hello";
+  let x = 12;     // x: (tau, alpha), C: { number <= alpha }
+
+  if (false) {    // in if statements, we accumulate constraints from all cases, even if
+                  // they never execute
+    x = '';       // x: (tau, alpha), C: { string, number <= alpha }
   }
 
-  mutate();
+  // begin-error
+  (x: number);    // throws an error because it doesn't satisfy our constraints!
+                  // the C we've accumulated so far tells us that whatever type x is, it
+                  // must be usable as a string and as a number
+  x * x;          // thus, we can't use it anywhere we would expect a number
+  // end-error
 
-  // $ExpectError
-  // let isString: string = foo; // Error!
-  // let isNumber: number = foo; // Error!
-  // let isBoolean: boolean = foo; // Error!
+  x + x;          // note that this *will* work, because the + operator works on both
+                  // strings and numbers
 
-  let isStringNumberBoolean: string | number | boolean = foo; // works!
-
-  // explanation: when a variable gets reassigned, by default it gets the type of all
-  // possible values (anything it has been, is, or could be). not sure why the effects of calling mutate
-  // are not preserved though
-
-  // foo = {}; // even this line causes L31 to error!
+  // this will work because flow can refine the type of x within the cases
+  switch (typeof x) {
+    case 'number':
+      x * x;
+      break;
+    case 'string':
+      x.substr(0);
+      break;
+  }
 }
 
+// OR
 {
+  let x = 12;               // x: (tau_x, alpha_x), C_x: { number <= alpha }
+  let y = true;             // y: (tau_y, alpha_y), C_y: { boolean <= alpha }
 
+  let z = (y || (x = ''));  // x: (tau_x, alpha_x), C_x: { number, string } <= alpha
+
+  (z: bool);
+  console.log(z);           // prints "true"
+  console.log(x);           // prints "12"
+  (x: number);              // this throws an error, for a similar reason as above! the constraints
+                            // we've picked up so far tell us that the type of x need to be usable as
+                            // a string and a number
 }
-
