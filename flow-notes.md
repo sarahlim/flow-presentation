@@ -59,24 +59,43 @@ Flow recognizes that invoking `reset()` sets `x` to type `null`, so the lookup `
 
 This is an example of **flow-sensitive** analysis -- Flow traces the program's dataflow, generating and propagating constraints on types and variables at each step. If a contradiction is reached, Flow will give a type error.
 
-# Typing judgments
+# Core concepts
 
 The core typing judgment for expressions in Flow is of the form
 $$\Gamma \vdash e : \tau ; \varepsilon ; \psi \dashv \Gamma' \triangleright C$$
 which should be read as "Environment $\Gamma$ proves that $e$ has type $\tau$, *and* evaluating $e$ has **effects** $\varepsilon$, *and* when $e$ is truthy we know **predicates** $\psi$. This judgment produces an **output environment** $\Gamma'$, and a corresponding **constraint set** $C$."
 
-Statements have a strictly simpler typing judgment:
+<!--Statements have a strictly simpler typing judgment:
 $$\Gamma \vdash s : \varepsilon \dashv \Gamma' \triangleright C$$
-which is identical to the judgment for expressions, except we don't prove a type (because statements can't have types) and we don't learn any predicates (because statements can't be truthy).
+which is identical to the judgment for expressions, except we don't prove a type (because statements can't have types) and we don't learn any predicates (because statements can't be truthy).-->
 
-There are several new concepts here, and we'll illustrate them below in the inference rules. As a whirlwind tour, however:
+There are several new concepts here, and we'll illustrate them below in the inference rules.
 
-- **Effects** (represented with $\varepsilon, \omega$) are program variables, like `x` or `y`. An effect $\varepsilon$ associated with some expression $e$ roughly describes the set of variables mutated by evaluating $e$.
-- **Predicates** (represented with $\psi_1, \psi_2, \ldots$) are statements like $x \mapsto \mathrm{truthy}$. A predicate $P$ maps a variable to what we know about its type. In the typing judgment above, a predicate set $\psi$ associated with some expression $e$ is roughly the additional typing information we learn when $e$ is truthy.
-- **Environments** (represented with $\Gamma_1, \Gamma_2, \ldots$) map
-- **Constraints** (represented with $C_1, C_2, \ldots$) are the trickiest concept to understand
+- **Effects** (represented with $\varepsilon, \omega$) are program variables, like `x` or `y`. An effect $\varepsilon$ associated with some expression $e$ is the set of variables mutated by evaluating $e$.
+- **Predicates** (represented with $\psi_1, \psi_2, \ldots$) are statements like $x \mapsto \mathrm{truthy}$. A predicate $P$ maps a variable to information we know about its type. A predicate set $\psi$ associated with some expression $e$ denotes the additional typing information we learn when $e$ is truthy.
+- **Environments** (represented with $\Gamma_1, \Gamma_2, \ldots$) map program variables, such as $x$, to types, such as $\tau^\alpha$.
+    
+    Flow's analysis is sensitive to the program dataflow, so each variable has two associated type variables $\tau^\alpha$:
+
+    + $\tau$ is the most specific type known for the *current dataflow*,
+    + the superscript $\alpha$ is the most general type across the *entire program*.
+- **Constraints** (represented with $C_1, C_2, \ldots$) track dataflows of variables and types. They come in two forms:
+    + **Subtyping constraints** like $\alpha \leq \beta$, which says that $\alpha$ is a subtype of $\beta$, and
+    + **Effect constraints**, which map *effects* (recall these are simply program variables) to *uses*.
+    
+        The three effects we care about are:
+        $$\tau_1 \leq \text{Call}(\tau_2 \xrightarrow{\omega} \alpha)$$ which represents a call to function $\tau_1$,
+        $$\tau \leq \text{Get}(\{ f: \alpha \})$$ which represents a lookup of field $f$ in record $\tau$, and
+        $$\varepsilon \leq \text{Havoc}(\Gamma)$$ which represents a *refinement invalidation* on an environment $\Gamma$. More specifically, this constraint says that a variable $\varepsilon$ may be updated, so any refinement concerning $\varepsilon$ in $\Gamma$ should be invalidated. We will discuss refinement in greater depth later.
+
+Analysis in Flow goes through two stages:
+
+1. **Constraint generation**, in which expressions are evaluated and produce sets of constraints;
+2. **Constraint propagation**, in which constraint sets are propagated through the program according to the dataflow graph. All possible dataflows are analyzed, and inconsistencies are reported as typecheck errors.
 
 # Constraint generation
+
+In the following section, we introduce **constraint generation rules** for the example code, one expression at a time.
 
 ## Record literals: \textsc{CG-Rec}
 
@@ -88,10 +107,12 @@ The inference rule \textsc{CG-Rec} allows us to prove the following about an exp
 
 - It has **type** $\{ f: \alpha \}$, where $\alpha$ is a fresh type variable;
 - Produces the **effects** $\varepsilon$ of evaluating $e$;
-- Does not add any new **predicates**;
-- Produces outputs:
-    + **Environment** $\Gamma'$, the output of evaluating $e$, and
-    + **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints $C$ from evaluating $e$, and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$.
+- Does not add any new **predicates**.
+
+The outputs of the judgment are:
+
+- **Environment** $\Gamma'$, the output of evaluating $e$, and
+- **Constraint** $C \cup \{ \tau \leq \alpha \}$, the union of the constraints $C$ from evaluating $e$, and a new constraint that says $e$'s type $\tau$ is a subtype of field $f$'s type $\alpha$.
 
 By applying this rule to the record in the example code,
 
@@ -127,11 +148,11 @@ we use rule \textsc{CG-Assign}.
 ```js
 function getName(x) {  // (x) => {
     x = x || robby;    //   s;
-    return x.name;     //   return e;
+    return x.name;     //   return e
 }                      // }
 ```
 
-A successful typecheck for $(x) \to \{ s; \text{return $e$}; \}$ tells us:
+A successful typecheck for $(x) \to \{ s; \text{return $e$} \}$ tells us:
 
 - The function has **type** $$\alpha \xrightarrow{\varepsilon \setminus x, \overline{x_i}} \tau$$ where:
     + $\alpha$, the **parameter type**, is a fresh type variable,
@@ -140,13 +161,15 @@ A successful typecheck for $(x) \to \{ s; \text{return $e$}; \}$ tells us:
         + This is just the effect $\varepsilon$ of the function body, minus the parameter $x$ and local variables $\overline{x_i}$, which are local to the function and irrelevant to the calling context.
 - Declaring the function has no new **effects** (doesn't invalidate any type information). We denote the empty effect set with $\bot$.
 - No new **predicates** either, denoted $\emptyset$. Again, just declaring a function doesn't tell us anything new about the types of program variables.
-- Outputs:
-    + **Environment** $\Gamma$ is unchanged from the input,
-    + **Constraints** $C$ are the constraints produced by evaluating the function body under the environment $$\Gamma_1 = \mathrm{erase}(\Gamma), x: \alpha^\alpha, \frac{\overline{x_i} = \mathrm{locals}(s)}{x_i : \mathrm{void}^{\alpha_i}}$$ which approximates the *flow-insensitive erasure* of the input environment $\Gamma$. In other words, we don't know when the function will be called, so we:
 
-        1. Remove all the information we've accumulated about the variables in $\Gamma$ (which the function captures by closure), using the meta-function `erase`
-        2. Map the **parameter** $x$ to type $\alpha^\alpha$, where $\alpha$ is the fresh type variable we've created, and
-        3. Map all the **local variables** $\overline{x_i}$ to type $\mathrm{void}^{\alpha_i}$, where $\alpha_i$ is the fresh type variable we've created for each local. This models the JavaScript semantics of "hoisting" variables before they have been initialized.
+This judgment produces the following outputs:
+
+- **Environment** $\Gamma$ is unchanged from the input,
+- **Constraints** $C$ are the constraints produced by evaluating the function body under the environment $$\Gamma_1 = \mathrm{erase}(\Gamma), x: \alpha^\alpha, \frac{\overline{x_i} = \mathrm{locals}(s)}{x_i : \mathrm{void}^{\alpha_i}}$$ which approximates the *flow-insensitive erasure* of the input environment $\Gamma$. In other words, we don't know when the function will be called, so we:
+
+    1. Remove all the information we've accumulated about the variables in $\Gamma$ (which the function captures by closure), using the meta-function `erase`
+    2. Map the **parameter** $x$ to type $\alpha^\alpha$, where $\alpha$ is the fresh type variable we've created, and
+    3. Map all the **local variables** $\overline{x_i}$ to type $\mathrm{void}^{\alpha_i}$, where $\alpha_i$ is the fresh type variable we've created for each local. This models the JavaScript semantics of "hoisting" variables before they have been initialized.
 
 <!-- TODO: Add `erase` -->
 
